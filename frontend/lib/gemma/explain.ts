@@ -5,7 +5,7 @@ import {
   VerdictExplanationSchema,
   type InterpretationSections,
 } from "@/lib/schemas/explain";
-import type { Lang } from "@/lib/i18n/types";
+import { OUTPUT_LANG_NAMES, type OutputLang } from "@/lib/i18n/output-langs";
 import type { ConfirmedGenericDocument, Verdict } from "@/lib/verify/types";
 import type { z } from "zod";
 
@@ -19,9 +19,8 @@ import type { z } from "zod";
 
 const STYLE = `Write for someone who is fluent in conversation but not in officialese, reading on a phone.
 
-- English: plain, direct, second person. Sentence case. Short sentences.
-- Yorùbá ("yo"): natural everyday Yorùbá, the way a person actually speaks — not formal broadcast translation. Use correct diacritics (ẹ, ọ, ṣ and tone marks).
-- Nigerian Pidgin ("pcm"): natural spoken Pidgin, warm and direct.
+- Write each language the way a person actually speaks it — natural, warm and direct, not stiff broadcast translation. In English: plain, second person, sentence case, short sentences.
+- In any other language, use the everyday register a friend would use, with correct diacritics and tone marks where the language uses them (e.g. Yorùbá ẹ, ọ, ṣ). Nigerian Pidgin should read as spoken Pidgin, not anglicised.
 
 Never apologise. Never use jargon without unpacking it in the same sentence: "arrears" is money carried over from a previous bill; an "estimated" reading is a guess by the DisCo rather than a meter reading.
 
@@ -40,7 +39,7 @@ ${STYLE}
 Return only this JSON object, no prose and no markdown fences:
 { "en": "...", "yo": "...", "pcm": "..." }`;
 
-const interpretationSystem = (langs: Lang[]) => `You explain what an official document says, in plain language, to someone who has to act on it.
+const interpretationSystem = (langs: OutputLang[]) => `You explain what an official document says, in plain language, to someone who has to act on it.
 
 You have not verified this document. Never claim any number or term is correct or incorrect.
 
@@ -154,9 +153,9 @@ export function explainVerdict(
 export function explainDocument(
   doc: ConfirmedGenericDocument,
   source?: { mimeType: string; data: string },
-  langs: Lang[] = ["en", "yo", "pcm"],
+  langs: OutputLang[] = ["en"],
   signal?: AbortSignal,
-): Promise<HarnessResult<Partial<Record<Lang, InterpretationSections>>>> {
+): Promise<HarnessResult<Partial<Record<OutputLang, InterpretationSections>>>> {
   const facts = [
     `Document type: ${doc.documentType.replace(/_/g, " ")}`,
     `Sent by: ${doc.issuer ?? "not stated"}`,
@@ -172,8 +171,7 @@ export function explainDocument(
       : "It states no explicit obligation.",
   ].join("\n");
 
-  const names: Record<Lang, string> = { en: "English", yo: "Yorùbá", pcm: "Nigerian Pidgin" };
-  const wanted = langs.map((lang) => `"${lang}" (${names[lang]})`).join(", ");
+  const wanted = langs.map((lang) => `"${lang}" (${OUTPUT_LANG_NAMES[lang]})`).join(", ");
 
   return generateValidated(interpretationSchemaFor(langs), {
     system: interpretationSystem(langs),

@@ -105,6 +105,7 @@ export const yo: Partial<Catalogue> = {
   "interpretation.header": "Àlàyé ni — kò tíì fìdí múlẹ̀",
   "interpretation.amountsNote": "(a kọ ọ́ síbẹ̀, a kò yẹ ẹ́)",
   "interp.reportSubtitle": "Àkọsílẹ̀ ìtúpalẹ̀ ìwé",
+  "interp.readIn": "Kà á ní èdè",
   "interp.whatThisIs": "Kí nǹkan yìí jẹ́",
   "interp.whatItSays": "Ohun tí ó sọ",
   "interp.whatItAsks": "Ohun tí ó fẹ́ kí o ṣe",

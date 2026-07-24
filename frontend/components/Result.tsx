@@ -5,6 +5,7 @@ import { VerdictStamp } from "./VerdictStamp";
 import { formatDate, formatNaira } from "@/lib/format";
 import { fieldInline, t, type Lang } from "@/lib/i18n";
 import type { StringKey } from "@/lib/i18n/en";
+import { OUTPUT_LANGS, OUTPUT_LANG_NAMES, type OutputLang } from "@/lib/i18n/output-langs";
 import { getNercTable } from "@/lib/rulesets";
 import type { Explanation } from "@/lib/schemas/explain";
 import type { ConfirmedDocument, Verdict } from "@/lib/verify/types";
@@ -27,6 +28,8 @@ export function Result({
   explaining,
   explainFailed,
   lang,
+  interpLang,
+  onInterpLang,
   source,
   onComplaint,
   onStartOver,
@@ -37,6 +40,9 @@ export function Result({
   explaining: boolean;
   explainFailed: boolean;
   lang: Lang;
+  /** Language the interpretation report is rendered in (interpretation tier only). */
+  interpLang: OutputLang;
+  onInterpLang: (next: OutputLang) => void;
   source: Source;
   onComplaint: () => void;
   onStartOver: () => void;
@@ -49,6 +55,8 @@ export function Result({
         explaining={explaining}
         explainFailed={explainFailed}
         lang={lang}
+        interpLang={interpLang}
+        onInterpLang={onInterpLang}
         source={source}
         onStartOver={onStartOver}
       />
@@ -182,6 +190,8 @@ function Interpretation({
   explaining,
   explainFailed,
   lang,
+  interpLang,
+  onInterpLang,
   source,
   onStartOver,
 }: {
@@ -190,11 +200,15 @@ function Interpretation({
   explaining: boolean;
   explainFailed: boolean;
   lang: Lang;
+  interpLang: OutputLang;
+  onInterpLang: (next: OutputLang) => void;
   source: Source;
   onStartOver: () => void;
 }) {
   const isInterpretation = explanation?.kind === "interpretation";
-  const sections = isInterpretation ? explanation.sections[lang] : null;
+  // Chrome (headings, labels) stays in the app language `lang`; the report body
+  // is rendered in the separately chosen `interpLang`.
+  const sections = isInterpretation ? explanation.sections[interpLang] : null;
   // The report exists in some language but not this one yet — a toggle landed
   // ahead of the background fetch, which is now being filled in on demand.
   const switchingLanguage = isInterpretation && !sections;
@@ -228,6 +242,25 @@ function Interpretation({
           </span>
         </div>
       </header>
+
+      {/* The report's output language — chosen independently of the app UI, so
+          a reader can keep the app in one language and read the document in
+          another. Picking a language not fetched yet triggers an on-demand
+          fetch (page.tsx) and the "putting it in your language" state below. */}
+      <label className="mb-8 flex items-center gap-2">
+        <span className="text-small text-ink/70">{t("interp.readIn", lang)}</span>
+        <select
+          value={interpLang}
+          onChange={(event) => onInterpLang(event.target.value as OutputLang)}
+          className="border-ink/30 text-body bg-paper min-h-12 rounded-md border px-2 font-medium"
+        >
+          {OUTPUT_LANGS.map((code) => (
+            <option key={code} value={code}>
+              {OUTPUT_LANG_NAMES[code]}
+            </option>
+          ))}
+        </select>
+      </label>
 
       {(explaining || switchingLanguage) && !sections && (
         <p className="text-body text-ink/70">{t("status.explaining", lang)}</p>

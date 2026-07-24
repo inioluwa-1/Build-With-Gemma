@@ -1,5 +1,6 @@
 import type { StringKey } from "./i18n/en";
 import type { Lang } from "./i18n/types";
+import type { OutputLang } from "./i18n/output-langs";
 import type { ClassifiedExtraction } from "./schemas/extraction";
 import type { Explanation, InterpretationSections } from "./schemas/explain";
 import type { EncodedDocument } from "./upload";
@@ -24,6 +25,13 @@ export type Screen =
 export interface AppState {
   screen: Screen;
   lang: Lang;
+  /**
+   * The language the interpretation report is rendered in — chosen on the
+   * result screen, independent of `lang` (the app UI). Defaults to the app
+   * language when a document is interpreted, then follows the report's own
+   * dropdown, which can reach any language in OUTPUT_LANGS.
+   */
+  interpLang: OutputLang;
   doc: ConfirmedDocument | null;
   /** Per-field 0–1 from extraction. Empty for manual entry, where the user is the source. */
   confidence: Record<string, number>;
@@ -51,6 +59,7 @@ export interface AppState {
 export const initialState: AppState = {
   screen: "capture",
   lang: "en",
+  interpLang: "en",
   doc: null,
   confidence: {},
   extracted: false,
@@ -74,7 +83,8 @@ export type Action =
   | { type: "verdict"; verdict: Verdict }
   | { type: "explaining" }
   | { type: "explained"; explanation: Explanation }
-  | { type: "explained-more"; sections: Partial<Record<Lang, InterpretationSections>> }
+  | { type: "explained-more"; sections: Partial<Record<OutputLang, InterpretationSections>> }
+  | { type: "set-interp-lang"; lang: OutputLang }
   | { type: "explain-failed" }
   | { type: "complaint"; formalEnglish: string; translated: string | null }
   | { type: "go"; screen: Screen }
@@ -126,7 +136,13 @@ export function reducer(state: AppState, action: Action): AppState {
         verdict: action.verdict,
         explanation: null,
         explainFailed: false,
+        // A fresh document starts its report in the app language; the reader can
+        // then switch it independently on the result screen.
+        interpLang: state.lang,
       };
+
+    case "set-interp-lang":
+      return { ...state, interpLang: action.lang };
 
     case "explaining":
       return { ...state, explaining: true, explainFailed: false };

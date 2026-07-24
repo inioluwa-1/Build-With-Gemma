@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Lang } from "@/lib/i18n/types";
+import type { OutputLang } from "@/lib/i18n/output-langs";
 
 /**
  * Explanation output (technical.md §6).
@@ -66,14 +67,20 @@ export const InterpretationExplanationSchema = z.object({
  * the background. Time to first result drops to roughly a third, and the toggle
  * is still an instant client-side swap by the time anyone reaches for it.
  */
-export function interpretationSchemaFor(langs: Lang[]) {
+export function interpretationSchemaFor(langs: OutputLang[]) {
   return z.object(
     Object.fromEntries(langs.map((lang) => [lang, SectionsSchema])),
-  ) as unknown as z.ZodType<Partial<Record<Lang, InterpretationSections>>>;
+  ) as unknown as z.ZodType<Partial<Record<OutputLang, InterpretationSections>>>;
 }
 
 export type InterpretationSections = z.infer<typeof SectionsSchema>;
 
+/**
+ * The verdict explanation stays the three UI languages — it is a short
+ * paragraph fetched with the verdict. Interpretation output, by contrast, is
+ * chosen per document from the wider `OutputLang` set and filled in on demand,
+ * so its sections are partial: only the languages fetched so far are present.
+ */
 export type Explanation =
   | { kind: "verdict"; text: Record<Lang, string> }
-  | { kind: "interpretation"; sections: Record<Lang, InterpretationSections> };
+  | { kind: "interpretation"; sections: Partial<Record<OutputLang, InterpretationSections>> };

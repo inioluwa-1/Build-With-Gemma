@@ -174,20 +174,22 @@ export default function Home() {
     }
   }, [doc, state.source, lang]);
 
-  // The two-pass fetch loads the on-screen language first and the rest in the
-  // background. If the reader toggles to a language that pass hasn't delivered
-  // yet — or that it failed to deliver — fetch just that one on demand, so the
-  // report is never left blank behind a language switch.
+  // The report's output language is chosen on the result screen, independent of
+  // the app UI. submit() fetches the app language first and backfills the other
+  // toggle languages; any other language the reader picks from the report's
+  // dropdown is fetched here on demand, so the report is never left blank behind
+  // a language switch.
+  const { interpLang } = state;
   const langRequests = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (state.screen !== "result") return;
     const exp = state.explanation;
     if (exp?.kind !== "interpretation") return; // submit() owns the first language
-    if (exp.sections[lang]) return; // already have this one
-    if (!navigator.onLine || langRequests.current.has(lang)) return;
+    if (exp.sections[interpLang]) return; // already have this one
+    if (!navigator.onLine || langRequests.current.has(interpLang)) return;
     if (!doc || doc.documentType === "electricity_bill") return;
 
-    langRequests.current.add(lang);
+    langRequests.current.add(interpLang);
     fetch("/api/explain", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -195,7 +197,7 @@ export default function Home() {
         kind: "interpretation",
         doc: doc as ConfirmedGenericDocument,
         ...(state.source ? { source: state.source } : {}),
-        langs: [lang],
+        langs: [interpLang],
       }),
       signal: AbortSignal.timeout(EXPLAIN_TIMEOUT_MS),
     })
@@ -204,8 +206,8 @@ export default function Home() {
         if (more?.ok) dispatch({ type: "explained-more", sections: more.explanation });
       })
       .catch(() => {})
-      .finally(() => langRequests.current.delete(lang));
-  }, [lang, state.screen, state.explanation, state.source, doc]);
+      .finally(() => langRequests.current.delete(interpLang));
+  }, [interpLang, state.screen, state.explanation, state.source, doc]);
 
   const openComplaint = useCallback(async () => {
     if (!doc || doc.documentType !== "electricity_bill") return;
@@ -295,6 +297,8 @@ export default function Home() {
           explaining={state.explaining}
           explainFailed={state.explainFailed}
           lang={lang}
+          interpLang={interpLang}
+          onInterpLang={(next) => dispatch({ type: "set-interp-lang", lang: next })}
           source={state.source}
           onComplaint={openComplaint}
           onStartOver={() => dispatch({ type: "reset" })}

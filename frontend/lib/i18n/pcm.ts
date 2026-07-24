@@ -102,6 +102,7 @@ export const pcm: Partial<Catalogue> = {
   "interpretation.header": "Explained — no be verified",
   "interpretation.amountsNote": "(listed, no be checked)",
   "interp.reportSubtitle": "Document analysis report",
+  "interp.readIn": "Read am for",
   "interp.whatThisIs": "Wetin this be",
   "interp.whatItSays": "Wetin e talk",
   "interp.whatItAsks": "Wetin e want make you do",

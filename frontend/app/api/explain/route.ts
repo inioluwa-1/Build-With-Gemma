@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { explainDocument, explainVerdict } from "@/lib/gemma/explain";
+import { OUTPUT_LANGS } from "@/lib/i18n/output-langs";
 import { GenericDocumentSchema, VerdictSchema } from "@/lib/schemas/verdict";
 import type { ConfirmedGenericDocument, Verdict } from "@/lib/verify/types";
 
@@ -30,9 +31,9 @@ const BodySchema = z.union([
         data: z.string().min(1),
       })
       .optional(),
-    /** Which languages to generate now. The client asks for the one on screen
-        first, then the rest in the background. */
-    langs: z.array(z.enum(["en", "yo", "pcm"])).min(1).default(["en", "yo", "pcm"]),
+    /** Which output languages to generate now. The client asks for the one on
+        screen first, then fetches others on demand as the reader selects them. */
+    langs: z.array(z.enum(OUTPUT_LANGS)).min(1).default(["en"]),
   }),
 ]);
 

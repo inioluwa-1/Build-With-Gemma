@@ -133,6 +133,7 @@ export const en = {
   "interpretation.header": "Explained — not verified",
   "interpretation.amountsNote": "(listed, not checked)",
   "interp.reportSubtitle": "Document analysis report",
+  "interp.readIn": "Read it in",
   "interp.whatThisIs": "What this is",
   "interp.whatItSays": "What it says",
   "interp.whatItAsks": "What it asks of you",
