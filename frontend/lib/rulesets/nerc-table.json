@@ -1,0 +1,18 @@
+{
+  "source": "NERC Multi-Year Tariff Order (MYTO), November 2025",
+  "disco": "IKEDC",
+  "effectiveDate": "2025-12-07",
+  "vatRate": 0.075,
+  "ratesIncludeVat": false,
+  "tolerance": {
+    "minNaira": 50,
+    "percentOfExpected": 0.01
+  },
+  "bands": {
+    "A": { "minSupplyHours": 20, "ratePerKwh": 209.5 },
+    "B": { "minSupplyHours": 16, "ratePerKwh": 62.48 },
+    "C": { "minSupplyHours": 12, "ratePerKwh": 50.0 },
+    "D": { "minSupplyHours": 8, "ratePerKwh": 43.0 },
+    "E": { "minSupplyHours": 4, "ratePerKwh": 40.0 }
+  }
+}
