@@ -1,11 +1,20 @@
 "use client";
 
+import { useEffect } from "react";
 import { MathLines } from "./MathLines";
 import { VerdictStamp } from "./VerdictStamp";
 import { formatDate, formatNaira } from "@/lib/format";
 import { fieldInline, t, type Lang } from "@/lib/i18n";
 import type { StringKey } from "@/lib/i18n/en";
-import { OUTPUT_LANGS, OUTPUT_LANG_NAMES, type OutputLang } from "@/lib/i18n/output-langs";
+import {
+  OUTPUT_LANGS,
+  OUTPUT_LANG_NAMES,
+  OUTPUT_LANG_BCP47,
+  isRtlOutputLang,
+  type OutputLang,
+} from "@/lib/i18n/output-langs";
+import { printReport, spokenSummary } from "@/lib/interpretation-export";
+import { useSpeech } from "@/lib/speech";
 import { getNercTable } from "@/lib/rulesets";
 import type { Explanation } from "@/lib/schemas/explain";
 import type { ConfirmedDocument, Verdict } from "@/lib/verify/types";
@@ -221,6 +230,47 @@ function Interpretation({
       ? `data:${source.mimeType};base64,${source.data}`
       : null;
 
+  const speech = useSpeech();
+  // Switching the report language stops any read-aloud still running in the old one.
+  const { stop: stopSpeech } = speech;
+  useEffect(() => stopSpeech(), [interpLang, stopSpeech]);
+  // Read-aloud speaks the report's own language; stop toggles it off.
+  const onListen = () => {
+    if (!sections) return;
+    if (speech.speaking) return speech.stop();
+    speech.speak(spokenSummary(sections), OUTPUT_LANG_BCP47[interpLang]);
+  };
+  // Print-to-PDF: chrome labels stay in the app language, matching the screen.
+  const onDownload = () => {
+    if (!sections) return;
+    printReport({
+      sections,
+      labels: {
+        subtitle: t("interp.reportSubtitle", lang),
+        badge: t("interpretation.header", lang),
+        whatThisIs: t("interp.whatThisIs", lang),
+        whatItSays: t("interp.whatItSays", lang),
+        whatItAsks: t("interp.whatItAsks", lang),
+        watchOut: t("interp.watchOut", lang),
+        amounts: t("interp.amounts", lang),
+        amountsNote: t("interpretation.amountsNote", lang),
+        sentBy: t("interp.sentBy", lang),
+        about: t("interp.about", lang),
+        trust: t("trust.interpretation", lang),
+      },
+      facts: facts
+        ? {
+            issuer: facts.issuer,
+            subject: facts.subject,
+            amounts: facts.amounts.map((a) => ({ label: a.label, value: formatNaira(a.value) })),
+            dates: facts.dates.map((d) => ({ label: d.label, value: d.value })),
+          }
+        : null,
+      langTag: OUTPUT_LANG_BCP47[interpLang],
+      rtl: isRtlOutputLang(interpLang),
+    });
+  };
+
   return (
     <div className="flex flex-1 flex-col py-6">
       <header className="border-ink/25 mb-8 border-b pb-6">
@@ -246,21 +296,47 @@ function Interpretation({
       {/* The report's output language — chosen independently of the app UI, so
           a reader can keep the app in one language and read the document in
           another. Picking a language not fetched yet triggers an on-demand
-          fetch (page.tsx) and the "putting it in your language" state below. */}
-      <label className="mb-8 flex items-center gap-2">
-        <span className="text-small text-ink/70">{t("interp.readIn", lang)}</span>
-        <select
-          value={interpLang}
-          onChange={(event) => onInterpLang(event.target.value as OutputLang)}
-          className="border-ink/30 text-body bg-paper min-h-12 rounded-md border px-2 font-medium"
-        >
-          {OUTPUT_LANGS.map((code) => (
-            <option key={code} value={code}>
-              {OUTPUT_LANG_NAMES[code]}
-            </option>
-          ))}
-        </select>
-      </label>
+          fetch (page.tsx) and the "putting it in your language" state below.
+          Listen and Download act on whatever language is showing. */}
+      <div className="mb-8 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2">
+          <span className="text-small text-ink/70">{t("interp.readIn", lang)}</span>
+          <select
+            value={interpLang}
+            onChange={(event) => onInterpLang(event.target.value as OutputLang)}
+            className="border-ink/30 text-body bg-paper min-h-12 rounded-md border px-2 font-medium"
+          >
+            {OUTPUT_LANGS.map((code) => (
+              <option key={code} value={code}>
+                {OUTPUT_LANG_NAMES[code]}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {sections && speech.supported && (
+          <button
+            type="button"
+            onClick={onListen}
+            aria-pressed={speech.speaking}
+            className="border-ink/30 text-small text-ink/80 flex min-h-12 items-center gap-1.5 rounded-md border px-3 font-medium"
+          >
+            <span aria-hidden>{speech.speaking ? "◼" : "▶"}</span>
+            {speech.speaking ? t("interp.stop", lang) : t("interp.listen", lang)}
+          </button>
+        )}
+
+        {sections && (
+          <button
+            type="button"
+            onClick={onDownload}
+            className="border-ink/30 text-small text-ink/80 flex min-h-12 items-center gap-1.5 rounded-md border px-3 font-medium"
+          >
+            <span aria-hidden>↓</span>
+            {t("interp.downloadPdf", lang)}
+          </button>
+        )}
+      </div>
 
       {(explaining || switchingLanguage) && !sections && (
         <p className="text-body text-ink/70">{t("status.explaining", lang)}</p>

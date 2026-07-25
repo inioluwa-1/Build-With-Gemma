@@ -42,8 +42,35 @@ export const OUTPUT_LANG_NAMES: Record<OutputLang, string> = {
   sw: "Swahili",
 };
 
+/**
+ * BCP-47 tag used to pick a speech-synthesis voice for read-aloud. Nigerian
+ * Pidgin has no synthesis voice anywhere, but it is English-based, so an English
+ * voice reads it intelligibly — hence "en". Availability of the rest is
+ * device-dependent; the reader falls back to the platform default voice when the
+ * language has none installed (lib/speech.ts).
+ */
+export const OUTPUT_LANG_BCP47: Record<OutputLang, string> = {
+  en: "en-US",
+  pcm: "en-NG",
+  yo: "yo-NG",
+  ha: "ha-NG",
+  ig: "ig-NG",
+  ff: "ff",
+  fr: "fr-FR",
+  ar: "ar",
+  pt: "pt-PT",
+  sw: "sw",
+};
+
+/** Languages written right-to-left — drives `dir` in the print view. */
+export const RTL_OUTPUT_LANGS: readonly OutputLang[] = ["ar"];
+
 export function outputLangName(lang: OutputLang): string {
   return OUTPUT_LANG_NAMES[lang];
+}
+
+export function isRtlOutputLang(lang: OutputLang): boolean {
+  return RTL_OUTPUT_LANGS.includes(lang);
 }
 
 export function isOutputLang(value: string): value is OutputLang {
