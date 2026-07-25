@@ -1,0 +1,569 @@
+<title>Vernac — Official documents, in your true tongue</title>
+<meta name="description" content="Vernac reads any official document and explains it in your language. Where published rules exist, it checks the numbers and shows the math. A Gemma 4 hackathon entry — Track 4, Fair Access." />
+
+<style>
+  :root {
+    /* Vernac's own palette (design.md §2) — a deliberate single visual world:
+       warm paper, ink, and a signage yellow. Green and red are semantic and
+       sacred: they appear only on a real verdict. */
+    --paper: #faf7f0;
+    --paper-2: #f2ede1;
+    --ink: #1a1a18;
+    --ink-80: #43423d;
+    --ink-60: #6f6d64;
+    --ink-40: #a19e92;
+    --rule: #d8d1c0;
+    --band-yellow: #f2c230;
+    --verify-green: #0b6e3f;
+    --alert-red: #c1272d;
+    --caution-amber: #a5711a;
+
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --stamp: "Arial Black", "Franklin Gothic Heavy", "Helvetica Neue", Impact, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+
+    --s-eyebrow: 0.76rem;
+    --s-label: 0.82rem;
+    --s-body: clamp(1rem, 0.96rem + 0.24vw, 1.2rem);
+    --s-lead: clamp(1.18rem, 1rem + 1vw, 1.7rem);
+    --s-h: clamp(2.1rem, 1.3rem + 3.6vw, 4rem);
+    --s-hero: clamp(2.7rem, 1.4rem + 6.2vw, 6.2rem);
+
+    --pad: clamp(1.5rem, 4.5vw, 6rem);
+    --maxw: 74rem;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  html, body { margin: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: var(--s-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  .deck { scroll-snap-type: y mandatory; }
+
+  /* ---- Slide shell ---- */
+  .slide {
+    position: relative;
+    min-height: 100svh;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: grid;
+    align-content: center;
+    padding: clamp(5rem, 9vh, 7rem) var(--pad) clamp(3rem, 7vh, 5rem);
+  }
+  .slide__inner { width: 100%; max-width: var(--maxw); margin: 0 auto; }
+
+  .slide--ink { background: var(--ink); color: var(--paper); }
+  .slide--ink .eyebrow { color: var(--band-yellow); }
+  .slide--ink .muted { color: #c9c4b6; }
+  .slide--ink .rule-soft { border-color: rgba(255,255,255,0.16); }
+
+  /* ---- Type ---- */
+  .eyebrow {
+    font-family: var(--sans);
+    font-size: var(--s-eyebrow);
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--caution-amber);
+    margin: 0 0 1.4rem;
+  }
+  h1, h2, h3 { font-family: var(--serif); font-weight: 700; text-wrap: balance; margin: 0; }
+  .hero-title {
+    font-size: var(--s-hero);
+    line-height: 0.98;
+    letter-spacing: -0.022em;
+    max-width: 16ch;
+  }
+  .headline {
+    font-size: var(--s-h);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    max-width: 20ch;
+  }
+  .lead {
+    font-size: var(--s-lead);
+    line-height: 1.35;
+    color: var(--ink-80);
+    max-width: 40ch;
+    margin: 1.4rem 0 0;
+  }
+  .slide--ink .lead { color: #d7d2c4; }
+  .muted { color: var(--ink-60); }
+  .body { max-width: 42ch; margin: 1.2rem 0 0; }
+  .kicker {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: var(--s-lead);
+    line-height: 1.35;
+    max-width: 32ch;
+  }
+
+  /* ---- Stamp / seal motif (the product's signature) ---- */
+  .seal {
+    display: inline-block;
+    font-family: var(--stamp);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    border: 3px solid var(--ink);
+    padding: 0.35em 0.7em 0.28em;
+    line-height: 1;
+  }
+  .stamp {
+    display: inline-block;
+    font-family: var(--stamp);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border: 4px solid currentColor;
+    padding: 0.4em 0.7em 0.32em;
+    transform: rotate(-3deg);
+    line-height: 1;
+    font-size: clamp(1.6rem, 1rem + 3vw, 3.2rem);
+  }
+  .stamp--green { color: var(--verify-green); }
+  .stamp--red { color: var(--alert-red); }
+  .flatband {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--stamp);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: clamp(0.9rem, 0.6rem + 1vw, 1.25rem);
+    padding: 0.55em 1em;
+  }
+
+  /* ---- Chrome: top bar, rail, hint ---- */
+  .topbar {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem clamp(1.1rem, 4.5vw, 3rem);
+    background: color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .wordmark { font-family: var(--serif); font-weight: 700; font-size: 1.4rem; letter-spacing: -0.01em; }
+  .topbar__right { display: flex; align-items: center; gap: 1.1rem; }
+  .track-badge {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-80); border: 1px solid var(--rule); border-radius: 999px; padding: 0.32em 0.8em;
+  }
+  .counter { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-60); font-variant-numeric: tabular-nums; }
+  @media (max-width: 640px) { .track-badge { display: none; } }
+
+  .rail {
+    position: fixed; right: clamp(0.6rem, 1.6vw, 1.4rem); top: 50%; transform: translateY(-50%);
+    z-index: 40; display: flex; flex-direction: column; gap: 0.7rem;
+  }
+  .rail button {
+    all: unset; cursor: pointer; width: 10px; height: 10px; border-radius: 999px;
+    background: transparent; border: 1.5px solid var(--ink-40); transition: all 0.3s ease;
+  }
+  .rail button[aria-current="true"] { background: var(--band-yellow); border-color: var(--ink); transform: scale(1.25); }
+  .rail button:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+  @media (max-width: 640px) { .rail { display: none; } }
+
+  .hint {
+    position: fixed; left: 50%; bottom: 1.1rem; transform: translateX(-50%); z-index: 40;
+    font-size: 0.72rem; letter-spacing: 0.08em; color: var(--ink-60);
+    display: flex; align-items: center; gap: 0.55rem;
+    background: color-mix(in srgb, var(--paper) 80%, transparent); backdrop-filter: blur(6px);
+    padding: 0.4rem 0.85rem; border: 1px solid var(--rule); border-radius: 999px;
+  }
+  .hint kbd {
+    font-family: var(--mono); font-size: 0.68rem; background: var(--ink); color: var(--paper);
+    border-radius: 4px; padding: 0.08em 0.4em; letter-spacing: 0;
+  }
+  .hint.is-hidden { opacity: 0; pointer-events: none; transition: opacity 0.5s; }
+
+  /* ---- Reusable layout ---- */
+  .grid-2 { display: grid; gap: clamp(1.5rem, 4vw, 3.5rem); }
+  @media (min-width: 820px) { .grid-2 { grid-template-columns: 1fr 1fr; align-items: start; } }
+  .grid-2--wide { align-items: center; }
+
+  .card {
+    border: 1px solid var(--rule); background: color-mix(in srgb, var(--ink) 3%, var(--paper));
+    padding: clamp(1.3rem, 2.6vw, 2.1rem);
+  }
+  .slide--ink .card { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.16); }
+  .card__label { font-family: var(--stamp); font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  .stat-row { display: flex; flex-wrap: wrap; gap: clamp(1.5rem, 5vw, 4rem); margin-top: 2.4rem; }
+  .stat__n { font-family: var(--serif); font-size: clamp(2.2rem, 1.2rem + 4vw, 3.6rem); line-height: 1; color: var(--band-yellow); }
+  .stat__t { margin-top: 0.5rem; max-width: 22ch; color: #d7d2c4; font-size: 0.95rem; }
+
+  /* Numbered process */
+  .steps { display: grid; gap: 0; margin-top: 2.2rem; counter-reset: step; }
+  .step {
+    display: grid; grid-template-columns: auto 1fr; gap: 1.1rem; align-items: baseline;
+    padding: 1rem 0; border-top: 1px solid; border-color: rgba(255,255,255,0.14);
+  }
+  .step:last-child { border-bottom: 1px solid rgba(255,255,255,0.14); }
+  .step__n { font-family: var(--mono); font-size: 0.85rem; color: var(--band-yellow); font-variant-numeric: tabular-nums; }
+  .step__t strong { font-family: var(--serif); font-weight: 700; font-size: 1.15rem; }
+  .step__t span { color: #cbc6b8; }
+
+  /* Ledger (the money shot) */
+  .ledger { font-family: var(--mono); font-size: clamp(0.92rem, 0.8rem + 0.5vw, 1.15rem); max-width: 30rem; }
+  .ledger-row { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.42rem 0; }
+  .ledger-row .leader { flex: 1; border-bottom: 1px dotted var(--ink-40); align-self: flex-end; margin-bottom: 0.28em; }
+  .ledger-row .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ledger-row.is-total { border-top: 2px solid var(--ink); margin-top: 0.5rem; padding-top: 0.7rem; font-weight: 700; }
+  .ledger-row.is-diff { color: var(--alert-red); font-weight: 700; font-size: 1.15em; }
+  .ledger-row .lbl.aside { color: var(--ink-60); }
+
+  .lang-line { margin-top: 1.6rem; border-left: 4px solid var(--band-yellow); padding-left: 1rem; }
+  .lang-line .yo { font-family: var(--serif); font-size: 1.25rem; line-height: 1.3; }
+  .lang-line .en { color: var(--ink-60); font-size: 0.92rem; margin-top: 0.35rem; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.6rem; }
+  .chip {
+    font-size: 0.82rem; letter-spacing: 0.02em; border: 1px solid var(--rule);
+    border-radius: 999px; padding: 0.4em 0.95em; color: var(--ink-80);
+  }
+  .chip--amber { border-color: var(--caution-amber); color: var(--caution-amber); }
+  .slide--ink .chip { border-color: rgba(255,255,255,0.24); color: #d7d2c4; }
+
+  .clause { border-top: 1px solid var(--rule); padding: 0.9rem 0; display: grid; grid-template-columns: auto 1fr; gap: 0.9rem; }
+  .clause__n { font-family: var(--serif); font-weight: 700; width: 2rem; height: 2rem; display: grid; place-items: center; background: var(--band-yellow); color: var(--ink); font-size: 0.9rem; }
+  .clause__n.alt { background: color-mix(in srgb, var(--ink) 10%, transparent); }
+  .clause__h { font-family: var(--stamp); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--caution-amber); }
+  .clause__b { font-size: 0.95rem; margin-top: 0.15rem; }
+
+  .amount-note { font-size: 0.78rem; color: var(--ink-60); text-transform: none; letter-spacing: 0; font-family: var(--sans); font-weight: 400; }
+
+  .source-line { margin-top: 1.8rem; font-size: 0.82rem; color: var(--ink-60); }
+
+  .points { display: grid; gap: 1.4rem; margin-top: 2.2rem; max-width: 46rem; }
+  .point { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: baseline; }
+  .point .mark { font-family: var(--stamp); color: var(--band-yellow); font-size: 1.1rem; }
+  .point strong { font-family: var(--serif); font-weight: 700; }
+
+  .close-statement { font-size: clamp(1.8rem, 1rem + 3.5vw, 3.4rem); line-height: 1.08; letter-spacing: -0.02em; max-width: 18ch; }
+
+  /* QR — scan to try it live */
+  .qr-card {
+    justify-self: center;
+    display: flex; flex-direction: column; align-items: center; gap: 1.1rem;
+    background: #fff; border: 1px solid var(--rule);
+    padding: clamp(1.4rem, 3vw, 2.2rem);
+    box-shadow: 0 1px 0 var(--rule), 6px 6px 0 var(--paper-2);
+  }
+  .qr-code { width: clamp(9rem, 30vw, 13rem); }
+  .qr-code svg { display: block; width: 100%; height: auto; shape-rendering: crispEdges; }
+  .qr-cap { text-align: center; display: flex; flex-direction: column; gap: 0.25rem; }
+  .qr-lead { font-family: var(--stamp); font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink); }
+  .qr-url { font-family: var(--mono); font-size: 0.82rem; color: var(--ink-60); word-break: break-all; }
+  @media (max-width: 819px) { .qr-card { margin-top: 2.4rem; } }
+
+  /* Reveal-on-enter */
+  .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2,0.8,0.2,1); }
+  .in-view .reveal { opacity: 1; transform: none; }
+  .in-view .reveal:nth-child(2) { transition-delay: 0.08s; }
+  .in-view .reveal:nth-child(3) { transition-delay: 0.16s; }
+  .in-view .reveal:nth-child(4) { transition-delay: 0.24s; }
+  .in-view .reveal:nth-child(5) { transition-delay: 0.32s; }
+  .stamp.reveal { transform: translateY(18px) rotate(-3deg) scale(0.9); }
+  .in-view .stamp.reveal { transform: rotate(-3deg) scale(1); }
+  @media (prefers-reduced-motion: reduce) {
+    .reveal, .stamp.reveal { opacity: 1 !important; transform: none !important; transition: none; }
+    .stamp.reveal, .in-view .stamp.reveal { transform: rotate(-3deg) !important; }
+  }
+
+  :focus-visible { outline: 3px solid var(--band-yellow); outline-offset: 3px; }
+
+  /* Print → one slide per page (functions as a real deck export) */
+  @media print {
+    .topbar, .rail, .hint { display: none; }
+    .slide { min-height: auto; height: 100vh; page-break-after: always; break-after: page; }
+    .reveal { opacity: 1 !important; transform: none !important; }
+    body { overflow: visible; }
+  }
+</style>
+
+<header class="topbar">
+  <span class="wordmark">Vernac</span>
+  <div class="topbar__right">
+    <span class="track-badge">Gemma&nbsp;4 · Track&nbsp;4 — Fair Access</span>
+    <span class="counter"><span id="cur">01</span>&thinsp;/&thinsp;08</span>
+  </div>
+</header>
+
+<nav class="rail" aria-label="Slides"></nav>
+
+<div class="hint" id="hint">
+  <kbd>→</kbd> next · <kbd>F</kbd> full screen
+</div>
+
+<main class="deck" id="deck">
+
+  <!-- 01 · HERO -->
+  <section class="slide" id="s1" data-slide aria-label="Vernac">
+    <div class="slide__inner">
+      <p class="eyebrow reveal">Gemma&nbsp;4 Hackathon · Track&nbsp;4 — Fair Access · SDG&nbsp;10</p>
+      <h1 class="hero-title reveal">Official documents, in your true tongue.</h1>
+      <div class="reveal" style="margin-top:1.6rem">
+        <span class="seal" style="font-size:clamp(1.3rem,0.9rem+2vw,2.4rem)">Verified.</span>
+      </div>
+      <p class="lead reveal" style="font-family:var(--serif);font-style:italic">Snap it. Verify it. Sabi it in your language.</p>
+    </div>
+  </section>
+
+  <!-- 02 · PROBLEM -->
+  <section class="slide slide--ink" id="s2" data-slide aria-label="The problem">
+    <div class="slide__inner">
+      <p class="eyebrow reveal">The problem</p>
+      <h2 class="headline reveal">A bill you can’t read is one thing. A bill you can’t check is another.</h2>
+      <p class="lead reveal">People receive electricity bills, tenancy notices, loan terms and government letters in a formal second language — and no easy way to know whether the numbers are even right. Translation without verification just makes you fluent in a possibly-wrong number.</p>
+      <div class="stat-row reveal">
+        <div class="stat">
+          <div class="stat__n">Millions</div>
+          <div class="stat__t">of unmetered customers billed on estimates they can’t contest.</div>
+        </div>
+        <div class="stat">
+          <div class="stat__n">#1</div>
+          <div class="stat__t">category of consumer complaints to Nigeria’s electricity regulator.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 · TWO TIERS -->
+  <section class="slide" id="s3" data-slide aria-label="Two tiers">
+    <div class="slide__inner">
+      <p class="eyebrow reveal">The decision</p>
+      <h2 class="headline reveal">Two tiers. One honest boundary.</h2>
+      <div class="grid-2 reveal" style="margin-top:2.4rem">
+        <div class="card">
+          <div class="card__label" style="color:var(--caution-amber)">Interpret</div>
+          <p class="body" style="margin-top:0.9rem">Any official document. A plain-language explanation of what it says, what it asks of you, and what to watch for — in the language you actually speak.</p>
+          <div style="margin-top:1.4rem"><span class="flatband">Explained — not verified</span></div>
+        </div>
+        <div class="card">
+          <div class="card__label" style="color:var(--verify-green)">Verify</div>
+          <p class="body" style="margin-top:0.9rem">Documents with a published, machine-checkable rule. Everything above, <em>plus</em> a deterministic verdict — the math shown line by line, the rule source stamped.</p>
+          <div style="margin-top:1.4rem"><span class="stamp stamp--green" style="font-size:1.3rem;transform:rotate(-3deg)">Checks out&nbsp;✓</span></div>
+        </div>
+      </div>
+      <p class="kicker reveal" style="margin-top:2.2rem">Interpretation is universal. Verification is <em>earned</em> — it activates only where a real published rule exists.</p>
+    </div>
+  </section>
+
+  <!-- 04 · HOW -->
+  <section class="slide slide--ink" id="s4" data-slide aria-label="How it works">
+    <div class="slide__inner">
+      <p class="eyebrow reveal">How it works</p>
+      <h2 class="headline reveal">The model reads. The code decides.</h2>
+      <div class="steps reveal">
+        <div class="step"><span class="step__n">01</span><span class="step__t"><strong>Snap</strong> — <span>photograph any document, or upload a file.</span></span></div>
+        <div class="step"><span class="step__n">02</span><span class="step__t"><strong>Gemma&nbsp;4</strong> — <span>classifies the document and extracts the fields, multimodally.</span></span></div>
+        <div class="step"><span class="step__n">03</span><span class="step__t"><strong>Confirm</strong> — <span>you see and correct what it read, before anything is computed.</span></span></div>
+        <div class="step"><span class="step__n">04</span><span class="step__t"><strong>Verify</strong> — <span>deterministic code checks the numbers against a static, dated ruleset.</span></span></div>
+        <div class="step"><span class="step__n">05</span><span class="step__t"><strong>Explain</strong> — <span>the result, put into your language.</span></span></div>
+      </div>
+      <p class="kicker reveal" style="margin-top:2rem;color:var(--band-yellow)">Gemma never computes the verdict — so a verdict can never be hallucinated.</p>
+    </div>
+  </section>
+
+  <!-- 05 · THE VERDICT (money shot) -->
+  <section class="slide" id="s5" data-slide aria-label="A real bill, checked">
+    <div class="slide__inner">
+      <div class="grid-2 grid-2--wide">
+        <div>
+          <p class="eyebrow reveal">A real bill, checked</p>
+          <div class="reveal" style="margin:0.5rem 0 1.8rem"><span class="stamp stamp--red">Overcharged</span></div>
+          <div class="ledger reveal">
+            <div class="ledger-row"><span class="lbl">142 kWh × ₦209.50</span><i class="leader"></i><span class="num">₦29,749.00</span></div>
+            <div class="ledger-row"><span class="lbl">+ VAT (7.5%)</span><i class="leader"></i><span class="num">₦2,231.18</span></div>
+            <div class="ledger-row is-total"><span class="lbl">Should be</span><i class="leader"></i><span class="num">₦31,980.18</span></div>
+            <div class="ledger-row"><span class="lbl">You were charged</span><i class="leader"></i><span class="num">₦38,400.00</span></div>
+            <div class="ledger-row is-diff"><span class="lbl">Difference</span><i class="leader"></i><span class="num">₦6,419.82</span></div>
+          </div>
+        </div>
+        <div>
+          <div class="lang-line reveal">
+            <div class="yo">Wọ́n gba owó ju bí wọ́n ṣe polówó rẹ̀ lọ.</div>
+            <div class="en">“You were charged more than the published rate.” — Yorùbá / English / Pidgin, one tap apart.</div>
+          </div>
+          <div class="chips reveal">
+            <span class="chip" style="border-color:var(--alert-red);color:var(--alert-red)">Draft a complaint →</span>
+          </div>
+          <p class="source-line reveal">Checked against the NERC Multi-Year Tariff Order, effective 7&nbsp;December&nbsp;2025. Arrears are shown separately — never counted as an error.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 06 · BEYOND BILLS -->
+  <section class="slide" id="s6" data-slide aria-label="Any document">
+    <div class="slide__inner">
+      <div class="grid-2 grid-2--wide">
+        <div>
+          <p class="eyebrow reveal">Any document</p>
+          <h2 class="headline reveal">Where there’s no rule to check, there’s still a document to understand.</h2>
+          <p class="lead reveal">A tenancy notice, a court summons, a loan letter — read in full, clause by clause, in plain language. Listed, never judged.</p>
+          <p class="kicker reveal" style="margin-top:1.6rem">One product. Any document. Verification where the rules exist.</p>
+        </div>
+        <div class="card reveal">
+          <div style="margin-bottom:1.1rem"><span class="flatband">Explained — not verified</span></div>
+          <h3 style="font-size:1.5rem;line-height:1.1">Notice to Quit &amp; Demand for Arrears</h3>
+          <div style="margin-top:1rem">
+            <div class="clause"><span class="clause__n">01</span><div><div class="clause__h">Payment</div><div class="clause__b">₦525,000 due by 19 August 2026.</div></div></div>
+            <div class="clause"><span class="clause__n alt">02</span><div><div class="clause__h">Service charge</div><div class="clause__b">A further ₦60,000 — <em>separate</em> from the total above.</div></div></div>
+            <div class="clause"><span class="clause__n">03</span><div><div class="clause__h">Watch out for</div><div class="clause__b">10% annual interest on all unpaid sums; only 7 days’ notice.</div></div></div>
+          </div>
+          <div class="chips" style="margin-top:1.2rem">
+            <span class="chip chip--amber">Amounts listed, not checked</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 · WHY IT MATTERS -->
+  <section class="slide slide--ink" id="s7" data-slide aria-label="Why it matters">
+    <div class="slide__inner">
+      <p class="eyebrow reveal">Fair access · SDG 10</p>
+      <h2 class="headline reveal">Comprehension is the deepest form of access.</h2>
+      <div class="points reveal">
+        <div class="point"><span class="mark">✓</span><div><strong>Three languages, spoken plainly.</strong> English, Yorùbá and Pidgin — natural and conversational, native-speaker reviewed, not stiff machine translation.</div></div>
+        <div class="point"><span class="mark">✓</span><div><strong>It works offline.</strong> The rulesets are local and static, so verification runs with no network — on a low-end Android, installable as a PWA.</div></div>
+        <div class="point"><span class="mark">✓</span><div><strong>The boundary is the credibility.</strong> A plain interpretation is never dressed up as a verdict. The green stamp is reserved for what has actually been checked.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 · CLOSE -->
+  <section class="slide" id="s8" data-slide aria-label="What's next">
+    <div class="slide__inner">
+      <div class="grid-2 grid-2--wide">
+        <div>
+          <p class="eyebrow reveal">What’s next</p>
+          <h2 class="headline reveal" style="margin-bottom:1.6rem">One ruleset at a time. No retraining, ever.</h2>
+          <div class="chips reveal" style="margin-bottom:2.4rem">
+            <span class="chip">Minimum-wage compliance</span>
+            <span class="chip">Tenancy deposits</span>
+            <span class="chip">Loan terms vs CBN guidance</span>
+            <span class="chip">Tax notices vs FIRS schedules</span>
+          </div>
+          <h3 class="close-statement reveal">Understanding a document includes knowing whether it’s right.</h3>
+          <div class="reveal" style="margin-top:2.4rem;display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap">
+            <span class="wordmark" style="font-size:1.8rem">Vernac</span>
+            <span class="muted">— Official documents, in your true tongue. Verified.</span>
+          </div>
+        </div>
+
+        <div class="qr-card reveal" role="group" aria-label="Try Vernac live">
+          <div id="qr" class="qr-code" aria-hidden="true"></div>
+          <div class="qr-cap">
+            <span class="qr-lead">Scan to try it live</span>
+            <span id="qr-url" class="qr-url"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Vendored QR generator (qrcode-generator, MIT, Kazuhiko Arase), served from
+     the app itself — no external request, no CDN. -->
+<script src="/qrcode.js"></script>
+
+<script>
+  // ── Set this to your deployed app URL ────────────────────────────────
+  const APP_URL = "https://vernac.vercel.app";
+  // ─────────────────────────────────────────────────────────────────────
+  (function () {
+    const holder = document.getElementById("qr");
+    const cap = document.getElementById("qr-url");
+    if (cap) cap.textContent = APP_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    if (!holder || typeof qrcode === "undefined") return;
+    try {
+      const qr = qrcode(0, "M"); // type 0 = auto-size, error correction M
+      qr.addData(APP_URL);
+      qr.make();
+      holder.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 0, scalable: true });
+    } catch (e) {
+      holder.textContent = "";
+    }
+  })();
+
+  (function () {
+    const slides = Array.from(document.querySelectorAll("[data-slide]"));
+    const rail = document.querySelector(".rail");
+    const curEl = document.getElementById("cur");
+    const hint = document.getElementById("hint");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let active = 0;
+
+    // Build the progress rail
+    slides.forEach((s, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-label", "Go to slide " + (i + 1));
+      b.addEventListener("click", () => go(i));
+      rail.appendChild(b);
+    });
+    const dots = Array.from(rail.children);
+
+    function setActive(i) {
+      active = i;
+      curEl.textContent = String(i + 1).padStart(2, "0");
+      dots.forEach((d, j) => d.setAttribute("aria-current", j === i ? "true" : "false"));
+    }
+
+    function go(i) {
+      i = Math.max(0, Math.min(slides.length - 1, i));
+      slides[i].scrollIntoView({ behavior: reduce ? "auto" : "smooth" });
+    }
+
+    // Active-slide + reveal tracking
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.intersectionRatio >= 0.4) e.target.classList.add("in-view");
+        if (e.intersectionRatio >= 0.55) setActive(slides.indexOf(e.target));
+      });
+    }, { threshold: [0.4, 0.55] });
+    slides.forEach((s) => io.observe(s));
+
+    // Keyboard: drive it like a deck
+    const NEXT = new Set(["ArrowRight", "ArrowDown", "PageDown", " ", "Spacebar"]);
+    const PREV = new Set(["ArrowLeft", "ArrowUp", "PageUp"]);
+    addEventListener("keydown", (e) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (NEXT.has(e.key)) { e.preventDefault(); go(active + 1); hideHint(); }
+      else if (PREV.has(e.key)) { e.preventDefault(); go(active - 1); hideHint(); }
+      else if (e.key === "Home") { e.preventDefault(); go(0); }
+      else if (e.key === "End") { e.preventDefault(); go(slides.length - 1); }
+      else if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+      }
+    });
+
+    let hintTimer = setTimeout(hideHint, 6000);
+    function hideHint() { hint.classList.add("is-hidden"); clearTimeout(hintTimer); }
+
+    setActive(0);
+  })();
+</script>

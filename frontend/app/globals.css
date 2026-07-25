@@ -1,26 +1,97 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/**
+ * Design tokens from design.md §2.
+ *
+ * Vernac has no dark mode. The surface is warm paper white because it is read
+ * in direct sunlight on a low-end Android, and because the app borrows the
+ * visual language of the documents it explains. A dark override would break
+ * the contrast contract the stamps depend on.
+ */
+@theme {
+  --color-paper: #faf7f0;
+  --color-ink: #1a1a18;
+  --color-verify-green: #0b6e3f;
+  --color-alert-red: #c1272d;
+  --color-caution-amber: #b7791f;
+  --color-band-yellow: #f2c230;
+
+  --font-display: var(--font-archivo-black), system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-serif: var(--font-libre-caslon), Georgia, "Times New Roman", serif;
+
+  /* Nothing below 14px anywhere; body is 16px minimum. This app is read by
+     people who do not zoom. */
+  --text-display: 2rem;
+  --text-display--line-height: 1.1;
+  --text-title: 1.5rem;
+  --text-title--line-height: 1.2;
+  --text-lead: 1.125rem;
+  --text-lead--line-height: 1.5;
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-small: 0.875rem;
+  --text-small--line-height: 1.5;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  /* Keeps Yorùbá tone marks from being clipped at the top of a line box. */
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: 1.6;
+}
+
+/** ₦ amounts must align down the line-by-line math. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/**
+ * The "VERIFIED." seal on the home hero (stitch split layout): a plain ruled
+ * box with wide tracking. Unlike the verdict stamp it does not rotate and is
+ * not green — it is a wordmark treatment, not a verdict.
+ */
+.verified-box {
+  display: inline-block;
+  border: 2px solid var(--color-ink);
+  padding: 0.125rem 0.75rem;
+  letter-spacing: 0.2em;
+}
+
+/**
+ * The one animation in the app: a single scale-and-settle when a verified
+ * verdict lands. The interpretation header deliberately does not animate —
+ * that difference is itself a tier cue (design.md §4).
+ */
+@keyframes stamp-land {
+  from {
+    transform: rotate(-3deg) scale(1.35);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(-3deg) scale(1);
+    opacity: 1;
+  }
+}
+
+.stamp-land {
+  animation: stamp-land 200ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp-land {
+    animation: none;
+  }
+}
+
+/** Visible keyboard focus everywhere (design.md §6). */
+:focus-visible {
+  outline: 3px solid var(--color-ink);
+  outline-offset: 2px;
 }

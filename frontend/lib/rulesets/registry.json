@@ -1,0 +1,10 @@
+{
+  "rulesets": [
+    {
+      "id": "nerc-electricity",
+      "documentType": "electricity_bill",
+      "table": "nerc-table.json",
+      "schema": "ElectricityBill"
+    }
+  ]
+}
