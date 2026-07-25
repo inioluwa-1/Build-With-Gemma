@@ -8,12 +8,17 @@ import { Confirm } from "@/components/Confirm";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { Result } from "@/components/Result";
+import { Settings } from "@/components/Settings";
 import { TypePicker } from "@/components/TypePicker";
-import { initialState, reducer } from "@/lib/app-state";
+import { initialState, reducer, type Screen } from "@/lib/app-state";
 import { complaintTemplate, type DiscrepancyVerdict } from "@/lib/complaint";
+import { runComplaint, runExplain, runExtract, type ExplainBody } from "@/lib/gemma/run";
+import { useProvider } from "@/lib/provider";
 import { FileTooLargeError, prepareUpload } from "@/lib/upload";
 import { t } from "@/lib/i18n";
-import { TOGGLE_LANGS } from "@/lib/i18n/types";
+import { TOGGLE_LANGS, type Lang } from "@/lib/i18n/types";
+import type { OutputLang } from "@/lib/i18n/output-langs";
+import type { InterpretationSections } from "@/lib/schemas/explain";
 import { resolveRuleset } from "@/lib/rulesets";
 import { verifyDocument } from "@/lib/verify";
 import type { ConfirmedBill, ConfirmedGenericDocument } from "@/lib/verify/types";
@@ -35,6 +40,8 @@ const EXPLAIN_TIMEOUT_MS = 60_000;
 export default function Home() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const online = useOnline();
+  const { config: provider, update: setProvider } = useProvider();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const { doc, verdict, lang } = state;
   const ruleset = doc ? resolveRuleset(doc.documentType) : null;
@@ -57,13 +64,7 @@ export default function Home() {
 
     try {
       const document = await prepareUpload(file);
-      const response = await fetch("/api/extract", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ image: document }),
-        signal: controller.signal,
-      });
-      const payload = await response.json();
+      const payload = await runExtract(document, provider, controller.signal);
 
       if (!payload.ok) {
         // A missing key or a dead endpoint is a different problem from an
@@ -88,7 +89,7 @@ export default function Home() {
       // keeping Zod off the client saves ~50KB of the JS budget. The real
       // defense is the Confirm screen, where the user sees every field before
       // anything is computed from it.
-      dispatch({ type: "extracted", extraction: payload.extraction, source: document });
+      dispatch({ type: "extracted", extraction: payload.extraction!, source: document });
     } catch (error) {
       // `abort(reason)` makes fetch reject with the reason itself, not a
       // DOMException — so the signal is what says why we stopped. Blaming the
@@ -108,7 +109,7 @@ export default function Home() {
       clearTimeout(deadline);
       extractAbort.current = null;
     }
-  }, []);
+  }, [provider]);
 
   const submit = useCallback(async () => {
     if (!doc) return;
@@ -122,31 +123,23 @@ export default function Home() {
     dispatch({ type: "explaining" });
 
     const interpretation = computed.status === "interpretation_only";
-    const base = interpretation
-      ? {
-          kind: "interpretation" as const,
-          doc: doc as ConfirmedGenericDocument,
-          // Send the file when there is one, so the explanation is written from
-          // the document rather than from a handful of extracted fields.
-          ...(state.source ? { source: state.source } : {}),
-        }
-      : { kind: "verdict" as const, verdict: computed };
-
-    const ask = (payload: object, signal?: AbortSignal) =>
-      fetch("/api/explain", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-        signal,
-      }).then((response) => response.json());
+    // Send the file when there is one, so the interpretation is written from the
+    // document rather than from a handful of extracted fields.
+    const interpBody = (langs: OutputLang[]): ExplainBody => ({
+      kind: "interpretation",
+      doc: doc as ConfirmedGenericDocument,
+      ...(state.source ? { source: state.source } : {}),
+      langs,
+    });
 
     try {
       // A faithful account of a long document costs ~54s across three
       // languages. Fetch the one being read first so the wait is a third of
       // that, then backfill the others while the user is reading.
       const rest = TOGGLE_LANGS.filter((other) => other !== lang);
-      const payload = await ask(
-        interpretation ? { ...base, langs: [lang] } : base,
+      const payload = await runExplain(
+        interpretation ? interpBody([lang]) : { kind: "verdict", verdict: computed },
+        provider,
         AbortSignal.timeout(EXPLAIN_TIMEOUT_MS),
       );
       if (!payload.ok) {
@@ -157,22 +150,29 @@ export default function Home() {
         type: "explained",
         explanation:
           payload.kind === "verdict"
-            ? { kind: "verdict", text: payload.explanation }
-            : { kind: "interpretation", sections: payload.explanation },
+            ? { kind: "verdict", text: payload.explanation as Record<Lang, string> }
+            : {
+                kind: "interpretation",
+                sections: payload.explanation as Partial<Record<OutputLang, InterpretationSections>>,
+              },
       });
 
       if (interpretation && rest.length > 0) {
         // Background: a failure here costs the toggle, never the result.
-        ask({ ...base, langs: rest }, AbortSignal.timeout(EXPLAIN_TIMEOUT_MS))
+        runExplain(interpBody(rest), provider, AbortSignal.timeout(EXPLAIN_TIMEOUT_MS))
           .then((more) => {
-            if (more?.ok) dispatch({ type: "explained-more", sections: more.explanation });
+            if (more?.ok)
+              dispatch({
+                type: "explained-more",
+                sections: more.explanation as Partial<Record<OutputLang, InterpretationSections>>,
+              });
           })
           .catch(() => {});
       }
     } catch {
       dispatch({ type: "explain-failed" });
     }
-  }, [doc, state.source, lang]);
+  }, [doc, state.source, lang, provider]);
 
   // The report's output language is chosen on the result screen, independent of
   // the app UI. submit() fetches the app language first and backfills the other
@@ -190,24 +190,26 @@ export default function Home() {
     if (!doc || doc.documentType === "electricity_bill") return;
 
     langRequests.current.add(interpLang);
-    fetch("/api/explain", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
+    runExplain(
+      {
         kind: "interpretation",
         doc: doc as ConfirmedGenericDocument,
         ...(state.source ? { source: state.source } : {}),
         langs: [interpLang],
-      }),
-      signal: AbortSignal.timeout(EXPLAIN_TIMEOUT_MS),
-    })
-      .then((response) => response.json())
+      },
+      provider,
+      AbortSignal.timeout(EXPLAIN_TIMEOUT_MS),
+    )
       .then((more) => {
-        if (more?.ok) dispatch({ type: "explained-more", sections: more.explanation });
+        if (more?.ok)
+          dispatch({
+            type: "explained-more",
+            sections: more.explanation as Partial<Record<OutputLang, InterpretationSections>>,
+          });
       })
       .catch(() => {})
       .finally(() => langRequests.current.delete(interpLang));
-  }, [interpLang, state.screen, state.explanation, state.source, doc]);
+  }, [interpLang, state.screen, state.explanation, state.source, doc, provider]);
 
   const openComplaint = useCallback(async () => {
     if (!doc || doc.documentType !== "electricity_bill") return;
@@ -220,19 +222,14 @@ export default function Home() {
 
     if (lang === "en" || !navigator.onLine) return;
     try {
-      const response = await fetch("/api/complaint", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ template: formalEnglish, lang }),
-      });
-      const payload = await response.json();
+      const payload = await runComplaint(formalEnglish, lang, provider);
       if (payload.ok) {
-        dispatch({ type: "complaint", formalEnglish, translated: payload.text });
+        dispatch({ type: "complaint", formalEnglish, translated: payload.text ?? null });
       }
     } catch {
       // Silent by design — the English complaint is already on screen.
     }
-  }, [doc, verdict, lang]);
+  }, [doc, verdict, lang, provider]);
 
   // Two screens use the wide, two-column layout: the home hero and the
   // interpretation report (its Document Analysis Report has a sidebar). The bill
@@ -242,6 +239,21 @@ export default function Home() {
     state.screen === "capture" ||
     (state.screen === "result" && state.verdict?.status === "interpretation_only");
 
+  // Where "back" goes from each screen. Capture is the root, and reading and
+  // complaint carry their own controls (Cancel / an explicit Back), so they
+  // stay out of this. Confirm returns to wherever the document came from — the
+  // camera for a photo, the type picker for a manual entry.
+  const backScreen: Screen | null =
+    state.screen === "type-picker"
+      ? "capture"
+      : state.screen === "confirm"
+        ? state.extracted
+          ? "capture"
+          : "type-picker"
+        : state.screen === "result"
+          ? "confirm"
+          : null;
+
   return (
     <main
       className={`mx-auto flex min-h-dvh w-full flex-col px-4 ${wide ? "max-w-5xl" : "max-w-md"}`}
@@ -249,12 +261,52 @@ export default function Home() {
       <header
         className={`flex items-center justify-between py-4 ${wide ? "border-ink/15 border-b" : ""}`}
       >
-        <span className="font-serif text-title font-bold">{t("app.name", lang)}</span>
-        <LanguageToggle
-          lang={lang}
-          onChange={(next) => dispatch({ type: "set-lang", lang: next })}
-        />
+        <div className="flex items-center gap-2">
+          {backScreen && (
+            <button
+              type="button"
+              onClick={() => dispatch({ type: "go", screen: backScreen })}
+              aria-label={t("action.back", lang)}
+              title={t("action.back", lang)}
+              className="text-ink/70 -ml-2 flex min-h-12 min-w-12 items-center justify-center text-2xl leading-none"
+            >
+              <span aria-hidden>←</span>
+            </button>
+          )}
+          <span className="font-serif text-title font-bold">{t("app.name", lang)}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <LanguageToggle
+            lang={lang}
+            onChange={(next) => dispatch({ type: "set-lang", lang: next })}
+          />
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            aria-label={t("settings.open", lang)}
+            title={t("settings.open", lang)}
+            className="border-ink/30 text-ink/70 relative flex min-h-12 min-w-12 items-center justify-center rounded-md border text-lg"
+          >
+            <span aria-hidden>⚙</span>
+            {/* A dot marks that generation is pointed at the local Ollama. */}
+            {provider.mode === "local" && (
+              <span
+                aria-hidden
+                className="bg-verify-green absolute right-1 top-1 h-2 w-2 rounded-full"
+              />
+            )}
+          </button>
+        </div>
       </header>
+
+      {settingsOpen && (
+        <Settings
+          lang={lang}
+          config={provider}
+          onChange={setProvider}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
 
       {state.screen === "capture" && (
         <Capture

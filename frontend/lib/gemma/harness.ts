@@ -1,5 +1,5 @@
 import type { ZodType } from "zod";
-import { GemmaUnavailableError, generate, type GenerateOptions } from "./client";
+import { GemmaUnavailableError, type GenerateFn, type GenerateOptions } from "./types";
 
 /**
  * Defense in depth around Gemma's structured output (technical.md §4.2).
@@ -54,10 +54,15 @@ function describeIssues(error: { issues: Array<{ path: PropertyKey[]; message: s
 /**
  * Generate, then parse and validate against `schema`, retrying with the
  * failure reason appended. Never throws.
+ *
+ * The `generate` transport is injected rather than imported, so the very same
+ * prompt-building and validation runs against either the cloud API (server) or
+ * a local Ollama instance (browser) — only the model call swaps.
  */
 export async function generateValidated<T>(
   schema: ZodType<T>,
   options: GenerateOptions,
+  generate: GenerateFn,
   maxAttempts: number = MAX_ATTEMPTS,
 ): Promise<HarnessResult<T>> {
   let lastDetail = "";

@@ -1,4 +1,5 @@
 import { generateValidated, type HarnessResult } from "./harness";
+import type { GenerateFn } from "./types";
 import { formatDate, formatNaira, formatNumber } from "@/lib/format";
 import {
   interpretationSchemaFor,
@@ -129,14 +130,19 @@ function describeVerdict(verdict: Verdict): string {
 
 export function explainVerdict(
   verdict: Verdict,
+  generate: GenerateFn,
   signal?: AbortSignal,
 ): Promise<HarnessResult<z.infer<typeof VerdictExplanationSchema>>> {
-  return generateValidated(VerdictExplanationSchema, {
-    system: VERDICT_SYSTEM,
-    prompt: `Explain this result to the customer in all three languages.\n\n${describeVerdict(verdict)}`,
-    temperature: 0.4,
-    signal,
-  });
+  return generateValidated(
+    VerdictExplanationSchema,
+    {
+      system: VERDICT_SYSTEM,
+      prompt: `Explain this result to the customer in all three languages.\n\n${describeVerdict(verdict)}`,
+      temperature: 0.4,
+      signal,
+    },
+    generate,
+  );
 }
 
 /**
@@ -152,6 +158,7 @@ export function explainVerdict(
  */
 export function explainDocument(
   doc: ConfirmedGenericDocument,
+  generate: GenerateFn,
   source?: { mimeType: string; data: string },
   langs: OutputLang[] = ["en"],
   signal?: AbortSignal,
@@ -173,15 +180,19 @@ export function explainDocument(
 
   const wanted = langs.map((lang) => `"${lang}" (${OUTPUT_LANG_NAMES[lang]})`).join(", ");
 
-  return generateValidated(interpretationSchemaFor(langs), {
-    system: interpretationSystem(langs),
-    prompt: source
-      ? `Explain the attached document. Read it in full and work from what is actually written on it.\n\nReturn exactly these ${langs.length} top-level keys and no others: ${wanted}.\n\nFor reference, these fields were read off it earlier — use the document itself where they disagree:\n${facts}`
-      : `Explain this document. These are the only facts available; there is no file to read.\n\nReturn exactly these ${langs.length} top-level keys and no others: ${wanted}.\n\n${facts}`,
-    ...(source ? { image: source } : {}),
-    temperature: 0.4,
-    // A long document produces a long "whatItSays", three times over.
-    maxOutputTokens: 8000,
-    signal,
-  });
+  return generateValidated(
+    interpretationSchemaFor(langs),
+    {
+      system: interpretationSystem(langs),
+      prompt: source
+        ? `Explain the attached document. Read it in full and work from what is actually written on it.\n\nReturn exactly these ${langs.length} top-level keys and no others: ${wanted}.\n\nFor reference, these fields were read off it earlier — use the document itself where they disagree:\n${facts}`
+        : `Explain this document. These are the only facts available; there is no file to read.\n\nReturn exactly these ${langs.length} top-level keys and no others: ${wanted}.\n\n${facts}`,
+      ...(source ? { image: source } : {}),
+      temperature: 0.4,
+      // A long document produces a long "whatItSays", three times over.
+      maxOutputTokens: 8000,
+      signal,
+    },
+    generate,
+  );
 }
