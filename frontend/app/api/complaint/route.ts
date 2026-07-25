@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { polishComplaint } from "@/lib/gemma/complaint";
+import { generate } from "@/lib/gemma/client";
 
 /**
  * Optional polish only. The complaint is already complete before this route is
@@ -19,7 +20,7 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: { kind: "bad_request" } }, { status: 400 });
   }
 
-  const result = await polishComplaint(body.data.template, body.data.lang, request.signal);
+  const result = await polishComplaint(body.data.template, body.data.lang, generate, request.signal);
   if (!result.ok) {
     return Response.json({ ok: false, error: { kind: result.error.kind } }, { status: 502 });
   }

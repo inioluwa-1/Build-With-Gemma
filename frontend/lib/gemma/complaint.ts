@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { generateValidated, type HarnessResult } from "./harness";
+import type { GenerateFn } from "./types";
 import { languageName } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n/types";
 
@@ -27,12 +28,17 @@ const PolishSchema = z.object({ text: z.string().min(1) });
 export function polishComplaint(
   template: string,
   lang: Lang,
+  generate: GenerateFn,
   signal?: AbortSignal,
 ): Promise<HarnessResult<z.infer<typeof PolishSchema>>> {
-  return generateValidated(PolishSchema, {
-    system: SYSTEM,
-    prompt: `Render this complaint in ${languageName(lang)}.\n\n${template}`,
-    temperature: 0.3,
-    signal,
-  });
+  return generateValidated(
+    PolishSchema,
+    {
+      system: SYSTEM,
+      prompt: `Render this complaint in ${languageName(lang)}.\n\n${template}`,
+      temperature: 0.3,
+      signal,
+    },
+    generate,
+  );
 }

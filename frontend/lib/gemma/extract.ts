@@ -1,5 +1,5 @@
 import { generateValidated, type HarnessResult } from "./harness";
-import type { InlineImage } from "./client";
+import type { GenerateFn, InlineImage } from "./types";
 import {
   ClassifiedExtractionSchema,
   type ClassifiedExtraction,
@@ -56,13 +56,18 @@ Rules:
 
 export function extractFromImage(
   image: InlineImage,
+  generate: GenerateFn,
   signal?: AbortSignal,
 ): Promise<HarnessResult<ClassifiedExtraction>> {
-  return generateValidated(ClassifiedExtractionSchema, {
-    system: SYSTEM,
-    prompt: "Read this document and return the JSON described above.",
-    image,
-    temperature: 0,
-    signal,
-  });
+  return generateValidated(
+    ClassifiedExtractionSchema,
+    {
+      system: SYSTEM,
+      prompt: "Read this document and return the JSON described above.",
+      image,
+      temperature: 0,
+      signal,
+    },
+    generate,
+  );
 }

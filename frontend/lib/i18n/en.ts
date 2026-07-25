@@ -175,6 +175,25 @@ export const en = {
 
   "action.startOver": "Check another document",
   "action.back": "Back",
+
+  "settings.open": "Settings",
+  "settings.title": "Where Gemma runs",
+  "settings.close": "Close",
+  "settings.done": "Done",
+  "settings.modeCloud": "Cloud",
+  "settings.modeLocal": "On my device",
+  "settings.cloudBody": "Runs Gemma 4 on our servers. Fastest and highest quality; needs a connection.",
+  "settings.localBody":
+    "Runs the Gemma 4 you pulled in Ollama, on your own machine. Private, and works offline.",
+  "settings.host": "Ollama address",
+  "settings.model": "Model",
+  "settings.test": "Test connection",
+  "settings.testing": "Checking…",
+  "settings.connected": "Connected — {model} is ready.",
+  "settings.modelMissing": "Reached Ollama, but {model} isn't pulled yet. Run: ollama pull {model}",
+  "settings.unreachable": "Couldn't reach Ollama. Is it running, and started so this site is allowed?",
+  "settings.corsHint":
+    "Start Ollama so the browser can reach it: OLLAMA_ORIGINS=\"*\" ollama serve (or \"{origin}\" to limit it to this site). A non-localhost address must use https.",
 } as const;
 
 export type StringKey = keyof typeof en;

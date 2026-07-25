@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { extractFromImage } from "@/lib/gemma/extract";
+import { generate } from "@/lib/gemma/client";
 
 /**
  * The thin proxy that keeps the API key server-side (technical.md §1).
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, error: { kind: "bad_request" } }, { status: 400 });
   }
 
-  const result = await extractFromImage(body.data.image, request.signal);
+  const result = await extractFromImage(body.data.image, generate, request.signal);
 
   if (!result.ok) {
     // A typed failure, never a crash: the client routes to manual entry with

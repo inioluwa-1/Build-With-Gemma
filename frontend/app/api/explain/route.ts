@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { explainDocument, explainVerdict } from "@/lib/gemma/explain";
+import { generate } from "@/lib/gemma/client";
 import { OUTPUT_LANGS } from "@/lib/i18n/output-langs";
 import { GenericDocumentSchema, VerdictSchema } from "@/lib/schemas/verdict";
 import type { ConfirmedGenericDocument, Verdict } from "@/lib/verify/types";
@@ -45,9 +46,10 @@ export async function POST(request: Request) {
 
   const result =
     body.data.kind === "verdict"
-      ? await explainVerdict(body.data.verdict as Verdict, request.signal)
+      ? await explainVerdict(body.data.verdict as Verdict, generate, request.signal)
       : await explainDocument(
           body.data.doc as ConfirmedGenericDocument,
+          generate,
           body.data.source,
           body.data.langs,
           request.signal,

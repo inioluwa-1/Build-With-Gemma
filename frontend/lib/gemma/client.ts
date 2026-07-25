@@ -1,49 +1,16 @@
 import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { GemmaUnavailableError, type GenerateOptions, type InlineImage } from "./types";
 
 /**
- * Thin adapter over Gemma 4 on the Gemini API.
+ * Thin adapter over Gemma 4 on the Gemini API — the cloud transport.
  *
  * Server-side only — the API key must never reach the browser. Import this
- * from route handlers and scripts, never from a component.
+ * from route handlers and scripts, never from a component. (The shared shapes
+ * live in ./types so the browser-side Ollama transport can reuse them.)
  */
 
-export type GemmaErrorKind = "no_api_key" | "network" | "rejected";
-
-export class GemmaUnavailableError extends Error {
-  constructor(
-    readonly kind: GemmaErrorKind,
-    message: string,
-    /** True when trying again could plausibly succeed. */
-    readonly retryable: boolean = true,
-  ) {
-    super(message);
-    this.name = "GemmaUnavailableError";
-  }
-}
-
-export interface InlineImage {
-  mimeType: string;
-  /** Base64 payload without the `data:` URL prefix. */
-  data: string;
-}
-
-export interface GenerateOptions {
-  prompt: string;
-  system?: string;
-  image?: InlineImage;
-  /** Extraction and verdict explanation both want determinism, not flair. */
-  temperature?: number;
-  maxOutputTokens?: number;
-  /**
-   * Gemma 4 reasons before answering unless told not to. Measured on a bill
-   * photo: 41.1s with the default budget, 2.3s with MINIMAL — for identical
-   * extractions. None of this app's calls are reasoning problems; they are
-   * transcription and paraphrase. MINIMAL is the default and "default" is
-   * opt-in. (`thinkingBudget: 0` is rejected by these models — use the level.)
-   */
-  thinking?: "minimal" | "default";
-  signal?: AbortSignal;
-}
+export { GemmaUnavailableError };
+export type { GemmaErrorKind, GenerateOptions, InlineImage, GenerateFn } from "./types";
 
 let client: GoogleGenAI | null = null;
 
